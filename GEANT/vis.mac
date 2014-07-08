@@ -1,0 +1,72 @@
+# $Id: vis.mac,v 1.2 2011/11/21 13:39:39 mgouzevi Exp $
+#
+# Sets some default verbose
+#
+/control/verbose 1
+/control/saveHistory
+/run/verbose 0
+#
+# set up shashlik ecal
+#
+/ecal/det/setNbOfLayers 28
+/ecal/det/setEcalAbsMat Tungsten
+/ecal/det/setEcalSensMat LYSO
+/ecal/det/setEcalAbsThick  2.5 mm
+/ecal/det/setEcalSensThick 1.5 mm
+/ecal/det/preshower 0
+/ecal/det/setDeadThick 0 mm
+/ecal/det/update
+#
+# create empty scene
+#
+/vis/scene/create
+#
+# Create a scene handler for a specific graphics system
+# (Edit the next line(s) to choose another graphic system)
+#
+# Use this open statement instead for OpenGL in immediate mode.
+/vis/open OGLIX 900x900-0+0
+#
+# Output an empty detector
+/vis/viewer/flush
+#
+# Draw trajectories at end of event, showing trajectory points as
+# markers of size 2 pixels
+/vis/scene/add/trajectories
+#/vis/modeling/trajectories/create/drawByCharge
+#/vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
+#/vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
+
+# (if too many tracks cause core dump => /tracking/storeTrajectory 0)
+#
+# To draw charged particles only
+#/vis/filtering/trajectories/particleFilter-0/invert true
+#
+# Many other options available with /vis/modeling and /vis/filtering.
+# For example, select colour by particle ID
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/set e- red
+#/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/set e+ blue
+#/vis/modeling/trajectories/create/drawByParticleID
+#/vis/modeling/trajectories/drawByParticleID-0/set gamma blue
+#/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/set pi+ green
+#/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/set pi- yellow
+#
+/vis/filtering/trajectories/create/particleFilter
+#/vis/filtering/trajectories/particleFilter-0/add gamma
+/vis/filtering/trajectories/particleFilter-0/add pi+
+/vis/filtering/trajectories/particleFilter-0/add pi-
+/vis/filtering/trajectories/particleFilter-0/add e-
+/vis/filtering/trajectories/particleFilter-0/add e+
+
+#/vis/scene/endOfEventAction accumulate
+/vis/scene/endOfEventAction accumulate 10
+#
+
+/vis/viewer/set/background white 0.
+/vis/viewer/set/viewpointThetaPhi -90 0
+/vis/viewer/panTo -1.15 0
+/vis/viewer/zoom 1.7

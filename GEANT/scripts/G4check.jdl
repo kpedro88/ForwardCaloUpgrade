@@ -1,0 +1,9 @@
+universe = vanilla
+Executable = ./G4check.sh
+should_transfer_files = NO
+notification = Never
+Output = PREFIX_NAME_$(cluster)_$(process).stdout
+Error  = PREFIX_NAME_$(cluster)_$(process).stderr
+Log    = PREFIX_NAME_$(cluster)_$(process).condor
+Arguments = $(cluster) $(process) RUN_DIR PREFIX_NAME INPUT_NAME
+Queue 1
