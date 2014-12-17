@@ -185,6 +185,13 @@ DetectorMessenger::DetectorMessenger(DetectorConstruction * Det)
   PreshowerCmd->SetGuidance("Enable or disable preshower");
   PreshowerCmd->SetParameterName("preshower",false);
   PreshowerCmd->AvailableForStates(G4State_PreInit,G4State_Idle);
+
+  LTnonuniformCmd = new G4UIcmdWithAnInteger("/ecal/det/LTnonuniform",this);
+  LTnonuniformCmd->SetGuidance("Enable or disable liquid tile nonlinearity");
+  LTnonuniformCmd->SetParameterName("LTnonuniform",false);
+  LTnonuniformCmd->SetRange("LTnonuniform>=0");
+  LTnonuniformCmd->AvailableForStates(G4State_PreInit,G4State_Idle);
+
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -209,6 +216,7 @@ DetectorMessenger::~DetectorMessenger()
   delete DeadThickCmd;
   delete NewDeadThickCmd;
   delete PreshowerCmd;
+  delete LTnonuniformCmd;
   delete MagFieldCmd;
   delete NbCellEcalCmd;
   delete BirksConsHcalCmd;
@@ -279,6 +287,9 @@ void DetectorMessenger::SetNewValue(G4UIcommand* command,G4String newValue)
    
   if( command == PreshowerCmd )
    { Detector->SetPreshower(PreshowerCmd->GetNewBoolValue(newValue));}
+
+  if( command == LTnonuniformCmd )
+   { Detector->SetLiquidTileNonuniformity(LTnonuniformCmd->GetNewIntValue(newValue));}
    
   if( command == MagFieldCmd )
    { Detector->SetMagField(MagFieldCmd->GetNewDoubleValue(newValue));}

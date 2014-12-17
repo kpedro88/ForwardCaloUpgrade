@@ -24,6 +24,7 @@ public:
 
   G4double getAttenuation(const G4Step*, G4double, G4double, G4double);
   G4double getBirkL3(const G4Step*, G4double, G4double, G4double);
+  G4double getLiquidTileNonuniformity(G4double, G4int);
 
 private:
   DetectorConstruction* detector;

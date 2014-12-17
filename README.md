@@ -32,6 +32,8 @@ This documentation describes the FCAL standalone simulation, which approximates 
 	  /ecal/det/setHcalOffset
 	* Chou-Birks' law constants: 3 arguments, birks1 birks2 birks3
 	  /ecal/det/setHcalBirks
+        * Non-uniform light yield: integer case (0, 1, 2, 3...), with function defined in SteppingAction
+         /ecal/det/LTnonuniform
 	  
 	b) Optionally, an HE extension can be added. This extension is a sampling calorimeter placed between the HE and the zero layer.
 	It is called "ZCAL" in the input commands. It can only be added if the old dead material is disabled.

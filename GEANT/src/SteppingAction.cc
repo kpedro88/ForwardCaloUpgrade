@@ -11,6 +11,8 @@
 #include "G4Step.hh"
 //#include "G4DynamicParticle.hh"
 #include "Randomize.hh"
+#include <cmath>
+#include <iostream>
 
 // Constructor determination with the pointers assignment
 //
@@ -182,7 +184,7 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep)
          G4double rkb     = birks[0]/density;
          response = edep*getAttenuation(aStep, rkb, birks[1], birks[2]);
        }
-
+       if(detector->DoLiquidTileNonuniformity()) response *= getLiquidTileNonuniformity(aPoint.y(),detector->DoLiquidTileNonuniformity());
        eventaction->AddHcal(response);
 	   if(std::acos(aPoint.z()/std::sqrt(aPoint.x()*aPoint.x()+aPoint.y()*aPoint.y()+aPoint.z()*aPoint.z()))<0.5) eventaction->AddHcal05(response);
        eventaction->fillHcalStep(response,nHcalLayer,RingHcal);
@@ -206,6 +208,7 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep)
        G4double rkb     = birks[0]/density;
        response = edep*getAttenuation(aStep, rkb, birks[1], birks[2]);
      }
+     if(detector->DoLiquidTileNonuniformity()) response *= getLiquidTileNonuniformity(aPoint.y(),detector->DoLiquidTileNonuniformity());
      eventaction->AddZero(response);
 	 if(std::acos(aPoint.z()/std::sqrt(aPoint.x()*aPoint.x()+aPoint.y()*aPoint.y()+aPoint.z()*aPoint.z()))<0.5) eventaction->AddZero05(response);
    }
@@ -220,6 +223,7 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep)
        G4double rkb     = birks[0]/density;
        response = edep*getAttenuation(aStep, rkb, birks[1], birks[2]);
      }
+     if(detector->DoLiquidTileNonuniformity()) response *= getLiquidTileNonuniformity(aPoint.y(),detector->DoLiquidTileNonuniformity());
      eventaction->AddZcal(response);
 	 if(std::acos(aPoint.z()/std::sqrt(aPoint.x()*aPoint.x()+aPoint.y()*aPoint.y()+aPoint.z()*aPoint.z()))<0.5) eventaction->AddZcal05(response);
 	 
@@ -269,5 +273,27 @@ G4double SteppingAction::getBirkL3(const G4Step* aStep, G4double rkb,
            
    return weight;
 }      
+
+G4double SteppingAction::getLiquidTileNonuniformity(G4double y, G4int version){
+	//function from fit to h_e_wcC_y_eff_chan24 in ana_tb_out_run4402.root
+	G4double yy = y - std::floor(y/89.6 + 0.5)*89.6;
+	G4double weight = 1.0;
+	if(version==1){
+		weight = (0.67+5.5e-4*yy*yy-4.4e-7*yy*yy*yy*yy)*1.19; //last factor to normalize to 1 at peak
+		//safety checks
+		if(weight>1.0) weight = 1.0;
+		else if(weight<0.0) weight = 0.0;
+		//std::cout << "y = " << y << ", yy = " << yy << ", weight = " << weight << std::endl;
+	}
+	else if(version==2){
+		if(std::abs(yy)>20&&std::abs(yy)<30) weight = 1.0;
+		else weight = 0.0;
+	}
+	else if(version==3){
+		weight = 0.2;
+	}
+	return weight;
+
+}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

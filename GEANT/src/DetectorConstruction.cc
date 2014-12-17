@@ -1570,6 +1570,12 @@ void DetectorConstruction::SetPreshower(G4bool val){
 	PreshowerEnabled = val;
 }
 
+// enable LT nonlin
+//------------------
+void DetectorConstruction::SetLiquidTileNonuniformity(G4int val){
+	LiquidTileNonuniformity = val;
+}
+
 //change hcal zero layer thickness
 //--------------------------------
 void DetectorConstruction::SetHcalZeroThickness(G4double val){

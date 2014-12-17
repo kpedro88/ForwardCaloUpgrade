@@ -51,6 +51,7 @@ class DetectorMessenger: public G4UImessenger
 	G4UIcmdWithADoubleAndUnit* HcalZeroThickCmd;
 	G4UIcmdWithADoubleAndUnit* HcalOffsetCmd;
 	G4UIcmdWithABool*          PreshowerCmd;
+    G4UIcmdWithAnInteger*      LTnonuniformCmd;
     G4UIcmdWithADoubleAndUnit* MagFieldCmd;
     G4UIcmdWithoutParameter*   UpdateCmd;
     G4UIcmdWith3Vector*        NbCellEcalCmd;

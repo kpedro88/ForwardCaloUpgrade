@@ -45,6 +45,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
      void SetNewDeadThickness(G4double);
      void SetHcalZeroThickness(G4double);
 	 void SetPreshower(G4bool);
+     void SetLiquidTileNonuniformity(G4int);
  
      void SetNbOfEcalLayers (G4int);   
      void ComputeEcalParameters();
@@ -90,6 +91,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
      G4double*   GetHcalBirksConstant() {return HcalBirksConst;};
      G4double*   GetEcalBirksConstant() {return EcalBirksConst;};
      G4double*   GetEcalBirkL3Constant(){return EcalBirkL3Const;};
+     G4int       DoLiquidTileNonuniformity(){return LiquidTileNonuniformity;};
 
   private:
 
@@ -166,7 +168,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
      G4double           AluSeThickness;
      G4double           LeadSeThickness;
 	 G4bool             PreshowerEnabled;
-
+     G4int              LiquidTileNonuniformity;
             
      G4Box*             solidWorld;    //pointer to the solid World 
      G4LogicalVolume*   logicWorld;    //pointer to the logical World
