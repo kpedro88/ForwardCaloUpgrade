@@ -210,8 +210,19 @@ void init_samples(int v0=0){
 	double w10[] = {0.5,0.35,0.35};
 	add_sample(10,"/data/users/pedrok/FullSim/wlyso/qgsp_bert_hp","wlyso_whcal","W-LYSO ECAL","W-LYSO",false,w10[v0],0.0,"(WHCAL, Q_B_H)");
 	set_depths(10,4*28+1.5,(4*28+1.5)/124.1,0.0,0.0,58.7*18,49.7/99.46*18);
-
-
+	//default ecal+hcal, no dead material
+	double w100[] = {0.5,0.3,0.2};
+	add_sample(100,"/data/users/pedrok/FullSim/pbwo4","hcal_nodead","PbWO_{4} ECAL","PbWO_{4}",true,w100[v0],0.0,"(no dead material)");
+	set_depths(100,220.,220./202.7,0.0,0.0,88.*17,79./153.2*17);
+	//default ecal+hcal, liquid tile nonuniformity
+	add_sample(1000,"/data/users/pedrok/FullSim/pbwo4","hcal_nonuni","PbWO_{4} ECAL","nonuni",true,w0[v0],0.0,"(w/ nonuniformity)");
+	set_depths(1000,220.,220./202.7,0.0,0.0,88.*17,79./153.2*17);
+	//default ecal+hcal, step fn nonuniformity
+	add_sample(1001,"/data/users/pedrok/FullSim/pbwo4","hcal_nonuni2","PbWO_{4} ECAL","nonuni",true,w0[v0],0.0,"(w/ step fn nonuni)");
+	set_depths(1001,220.,220./202.7,0.0,0.0,88.*17,79./153.2*17);
+	//default ecal+hcal, 20% light yield
+	add_sample(1002,"/data/users/pedrok/FullSim/pbwo4","hcal_nonuni3","PbWO_{4} ECAL","HCAL 20%",true,w0[v0],0.0,"(HCAL 20% LY)");
+	set_depths(1002,220.,220./202.7,0.0,0.0,88.*17,79./153.2*17);		
 }
 
 std::string pdir = "plots";
@@ -911,6 +922,8 @@ TGraphErrors* g4_plot_res(int snum, int imip, int qty, bool do_fit, bool do_jet,
 
 	//graph values
 	std::string qtyaxes[] = {"Response (#mu/E_{true})","Resolution (#sigma/#mu)","MIP fraction"};
+	if(do_jet) { qtyaxes[0] = "Jet " + qtyaxes[0]; qtyaxes[1] = "Jet " + qtyaxes[1]; }
+	else { qtyaxes[0] = "Pion " + qtyaxes[0]; qtyaxes[1] = "Pion " + qtyaxes[1]; }
 	val_graph = new TGraphErrors(maxE,xvals,vals,x_errors,y_errors);
 	val_graph->GetXaxis()->SetTitle("Energy [GeV]");
 	val_graph->GetYaxis()->SetTitle(qtyaxes[qty].c_str());
@@ -1033,6 +1046,11 @@ void g4_comp(int s1, int s2, int imip, int qty, bool do_fit, bool do_jet, bool d
 	Sample* sp2 = sample_map[s2];
 	if(!sp1) { std::cout << "Sample " << s1 << " is not loaded." << std::endl; return; }
 	else if(!sp2) { std::cout << "Sample " << s2 << " is not loaded." << std::endl; return; }
+	int legentries = 0;
+	if(!sp1->supp_info.empty()) legentries += 2;
+	else legentries += 1;
+	if(!sp2->supp_info.empty()) legentries += 2;
+	else legentries += 1;
 	
 	//setup canvas with histo and ratio areas
 	std::string qtycans[] = {"mu-comp","sigma-comp","nmip-comp"};
@@ -1054,16 +1072,15 @@ void g4_comp(int s1, int s2, int imip, int qty, bool do_fit, bool do_jet, bool d
 	pad1->cd();
 
 	//legend, pave coords
-	double y1;
-	if(qty==0) y1 = 0.2;
-	else y1 = 0.5;
-	
-	double y2 = y1 + 0.1;
+	double y1, y2;
+	if(qty==0) { y1 = 0.05; y2 = y1 + 0.05*legentries; }
+	else { y2 = 0.9; y1 = y2 - 0.05*legentries; }
 
-	TLegend* leg = new TLegend(0.6,y1,0.9,y2);
+	TLegend* leg = new TLegend(0.5,y1,0.9,y2);
 	//std::string gname[] = {"PbWO_{4} ECAL","W-LYSO ECAL"};
 	//std::string gname_rat[] = {"PbWO_{4}","W-LYSO"};
 	std::string gname[] = {sp1->gname,sp2->gname};
+	std::string gname_supp[] = {sp1->supp_info,sp2->supp_info};
 	std::string gname_rat[] = {sp1->gname_rat,sp2->gname_rat};
 	
 	//get and plot graphs
@@ -1083,7 +1100,8 @@ void g4_comp(int s1, int s2, int imip, int qty, bool do_fit, bool do_jet, bool d
 		vals[i] = the_graphs[i]->GetY();
 		errs[i] = the_graphs[i]->GetEY();
 
-		leg->AddEntry(the_graphs[i],(gname[i]).c_str(),"p");
+		leg->AddEntry(the_graphs[i],(gname[i]).c_str(),"pl");
+		if(!gname_supp[i].empty()) leg->AddEntry((TObject*)0,gname_supp[i].c_str(),"");
 		//if(qty) the_graphs[i]->GetYaxis()->SetRangeUser(0,1);
 		//else the_graphs[i]->GetYaxis()->SetRangeUser(0,1.3);
 
@@ -1112,34 +1130,6 @@ void g4_comp(int s1, int s2, int imip, int qty, bool do_fit, bool do_jet, bool d
 	leg->SetTextFont(42);
 	leg->SetTextSize(0.05);
 	leg->Draw("same");
-
-	//optional text above legend
-	TPaveText* pave0 = new TPaveText(0.6,y2+0.06,0.9,y2+0.01,"NDC");
-	pave0->SetFillColor(0);
-	pave0->SetBorderSize(0);
-	pave0->SetTextFont(42);
-	pave0->SetTextSize(0.05);
-	if(!sp1->supp_info.empty()) {
-		pave0->AddText(sp1->supp_info.c_str());
-		pave0->Draw("same");
-	}
-	//if(s1==3) pave0->AddText("(no dead material)");
-	//else if(s1==5) pave0->AddText("(extended HE)");
-	//if(s1==3 || s1==5) pave0->Draw("same");
-	
-	//optional text below legend
-	TPaveText* pave1 = new TPaveText(0.6,y1-0.06,0.9,y1-0.01,"NDC");
-	pave1->SetFillColor(0);
-	pave1->SetBorderSize(0);
-	pave1->SetTextFont(42);
-	pave1->SetTextSize(0.05);
-	if(!sp2->supp_info.empty()) {
-		pave1->AddText(sp2->supp_info.c_str());
-		pave1->Draw("same");
-	}
-	//if(s2==3) pave1->AddText("(no dead material)");
-	//else if(s2==5) pave1->AddText("(extended HE)");
-	//if(s2==3 || s2==5) pave1->Draw("same");
 	
 	//setup prelim text
 	double umax3 = .95;
@@ -1226,16 +1216,21 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 	Double_t** vals = new Double_t*[s2.size()+1];
 	Double_t** errs = new Double_t*[s2.size()+1];
 	Sample** sp = new Sample*[s2.size()+1];
+	int legentries = 0;
 	
 	//get s1
 	sp[0] = sample_map[s1];
 	if(!sp[0]) { std::cout << "Sample " << s1 << " is not loaded." << std::endl; return; }
+	if(!sp[0]->supp_info.empty()) legentries += 2;
+	else legentries += 1;
 	the_graphs[0] = g4_plot_res(s1,imip,qty,do_fit,do_jet,0); //default
 	
 	//get s2's	
 	for(int i = 1; i <= s2.size(); i++){
 		sp[i] = sample_map[s2[i-1]];
 		if(!sp[i]) { std::cout << "Sample " << s2[i-1] << " is not loaded." << std::endl; return; }
+		if(!sp[i]->supp_info.empty()) legentries += 2;
+		else legentries += 1;
 		the_graphs[i] = g4_plot_res(s2[i-1],imip,qty,do_fit,do_jet,0); //shashlik
 	}
 	
@@ -1259,12 +1254,10 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 	pad1->cd();
 
 	//legend, pave coords
-	double y2;
-	if(qty==0) y2 = 0.6;
-	else y2 = 0.9;
+	double y2, y1;
+	if(qty==0) { y1 = 0.05; y2 = y1 + 0.05*legentries; }
+	else { y2 = 0.9; y1 = y2 - 0.05*legentries; }
 	
-	double y1 = y2 - 0.1*(s2.size()+1);
-
 	TLegend* leg = new TLegend(0.5,y1,0.9,y2);
 	
 	Color_t color[] = {kBlack, kBlue, kMagenta, kRed, kYellow+2, kOrange+7};
@@ -1274,10 +1267,8 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 		vals[i] = the_graphs[i]->GetY();
 		errs[i] = the_graphs[i]->GetEY();
 
-		string legname;
-		if(!sp[i]->supp_info.empty()) legname = "#splitline{" + sp[i]->gname + "}{" + sp[i]->supp_info + "}";
-		else legname = sp[i]->gname;
-		leg->AddEntry(the_graphs[i],(legname).c_str(),"p");
+		leg->AddEntry(the_graphs[i],sp[i]->gname.c_str(),"p");
+		if(!sp[i]->supp_info.empty()) leg->AddEntry((TObject*)0,sp[i]->supp_info.c_str(),"");
 		//if(qty) the_graphs[i]->GetYaxis()->SetRangeUser(0,1);
 		//else the_graphs[i]->GetYaxis()->SetRangeUser(0,1.3);
 
@@ -1285,6 +1276,10 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 		if(qty==1) the_graphs[i]->GetYaxis()->SetRangeUser(0,0.5);
 		else if(qty==2) the_graphs[i]->GetYaxis()->SetRangeUser(0,1.0);
 		else if(qty==0) the_graphs[i]->GetYaxis()->SetRangeUser(0,1.1);
+		//if(qty==1) the_graphs[i]->GetYaxis()->SetRangeUser(0,0.2);
+		//else if(qty==2) the_graphs[i]->GetYaxis()->SetRangeUser(0,1.0);
+		//else if(qty==0) the_graphs[i]->GetYaxis()->SetRangeUser(0.7,1.05);
+
 		the_graphs[i]->GetXaxis()->SetLabelOffset(999);
 		the_graphs[i]->GetYaxis()->SetTitleOffset(1.1);
 		the_graphs[i]->GetYaxis()->SetTitleSize(32/(pad1->GetWh()*pad1->GetAbsHNDC()));
@@ -1304,6 +1299,7 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 	leg->SetBorderSize(0);
 	leg->SetTextSize(0.05);
 	leg->SetTextFont(42);
+	leg->SetTextAlign(11); //testing...
 	leg->Draw("same");
 	
 	//setup prelim text
@@ -1353,7 +1349,11 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 		rat_graph[i-1]->GetYaxis()->SetTickLength(6/(pad2->GetWh()*pad2->GetAbsHNDC()));
 		rat_graph[i-1]->GetXaxis()->SetTickLength(12/(pad2->GetWh()*pad2->GetAbsHNDC()));
 		rat_graph[i-1]->GetYaxis()->SetNdivisions(503);
-		if(do_jet) rat_graph[i-1]->GetYaxis()->SetRangeUser(0.75,1.25);
+		if(do_jet) {
+			rat_graph[i-1]->GetYaxis()->SetRangeUser(0.75,1.25);
+			//if(qty==0) rat_graph[i-1]->GetYaxis()->SetRangeUser(0.95,1.25);
+			//else if(qty==1) rat_graph[i-1]->GetYaxis()->SetRangeUser(0.75,1.05);
+		}
 		else rat_graph[i-1]->GetYaxis()->SetRangeUser(0.5,1.5);
 		
 		if(i==1) rat_graph[i-1]->Draw("APZ");
@@ -1394,15 +1394,215 @@ void g4_multicomp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, b
 void run_g4_multicomp(int imip, int qty, bool do_fit, bool do_jet, bool do_print=false){
 	int s1 = 0;
 	std::vector<int> s2;
-	//s2.push_back(2);
-	//s2.push_back(3);
+	s2.push_back(100);
 	s2.push_back(3);
 	s2.push_back(5);
-	//s2.push_back(6);
 	s2.push_back(7);
-	//s2.push_back(71);
 	
 	g4_multicomp(s1,s2,imip,qty,do_fit,do_jet,do_print);
+}
+
+//----------------------------------------------------------------------------------------
+//function to compare multiple (>2) plots of response or resolution from previous function
+//performance plot style (Phase 2 TP)
+void g4_multicomp_tp(int s1, std::vector<int> s2, int imip, int qty, bool do_fit, bool do_jet, bool do_print=false){
+	int maxE = do_jet ? maxJTe : maxHDe;
+
+	if(s2.size()+1 > 6) std::cout << "Note: more markers and colors need to be added (only 6 currently defined)" << std::endl;
+	
+	TGraphErrors** the_graphs = new TGraphErrors*[s2.size()+1];
+	Double_t** vals = new Double_t*[s2.size()+1];
+	Double_t** errs = new Double_t*[s2.size()+1];
+	Sample** sp = new Sample*[s2.size()+1];
+	
+	//get s1
+	sp[0] = sample_map[s1];
+	if(!sp[0]) { std::cout << "Sample " << s1 << " is not loaded." << std::endl; return; }
+	the_graphs[0] = g4_plot_res(s1,imip,qty,do_fit,do_jet,0); //default
+	
+	//get s2's	
+	for(int i = 1; i <= s2.size(); i++){
+		sp[i] = sample_map[s2[i-1]];
+		if(!sp[i]) { std::cout << "Sample " << s2[i-1] << " is not loaded." << std::endl; return; }
+		the_graphs[i] = g4_plot_res(s2[i-1],imip,qty,do_fit,do_jet,0); //shashlik
+	}
+	
+	//setup canvas with histo and ratio areas
+	std::string qtycans[] = {"mu-comp","sigma-comp","nmip-comp"};
+	TCanvas* can = new TCanvas(qtycans[qty].c_str(),qtycans[qty].c_str(),700,750);
+	TPad* pad1;
+	can->cd();
+	pad1 = new TPad("graph","",0,0.27,1.0,1.0);
+	pad1->SetMargin(0.15,0.05,0.02,0.05);
+	pad1->Draw();
+	pad1->SetTicks(1,1);
+	pad1->SetLogx();
+	TPad* pad2;
+	can->cd();
+	pad2 = new TPad("dmc","",0,0,1.0,0.25);
+	pad2->SetMargin(0.15,0.05,0.35,0.05);
+	pad2->Draw();
+	pad2->SetTicks(1,1);
+	pad2->SetLogx();
+	pad1->cd();
+
+	//legend, pave coords
+	double y2;
+	if(qty==0) y2 = 0.4;
+	else y2 = 0.9;
+	
+	double y1 = y2 - 0.05*(s2.size()+1);
+
+	//TLegend* leg = new TLegend(0.4,y1,0.9,y2);
+	TLegend* leg = new TLegend(0.5,y1,0.9,y2);
+	
+	Color_t color[] = {kBlack, kBlue, kMagenta, kRed, kYellow+2, kOrange+7};
+	Int_t marker[] = {20, 21, 22, 23, 33, 29};
+	
+	for(int i = 0; i < s2.size()+1; i++){
+		vals[i] = the_graphs[i]->GetY();
+		errs[i] = the_graphs[i]->GetEY();
+
+		string legname;
+		legname = sp[i]->gname;
+		leg->AddEntry(the_graphs[i],(legname).c_str(),"p");
+		//if(qty) the_graphs[i]->GetYaxis()->SetRangeUser(0,1);
+		//else the_graphs[i]->GetYaxis()->SetRangeUser(0,1.3);
+
+		//formatting
+		if(qty==1) the_graphs[i]->GetYaxis()->SetRangeUser(0,0.2);
+		else if(qty==2) the_graphs[i]->GetYaxis()->SetRangeUser(0,1.0);
+		else if(qty==0) the_graphs[i]->GetYaxis()->SetRangeUser(0.7,1.05);
+		the_graphs[i]->GetXaxis()->SetLabelOffset(999);
+		the_graphs[i]->GetYaxis()->SetTitleOffset(1.1);
+		the_graphs[i]->GetYaxis()->SetTitleSize(32/(pad1->GetWh()*pad1->GetAbsHNDC()));
+		the_graphs[i]->GetYaxis()->SetLabelSize(28/(pad1->GetWh()*pad1->GetAbsHNDC()));
+		the_graphs[i]->GetYaxis()->SetTickLength(12/(pad1->GetWh()*pad1->GetAbsHNDC()));
+		the_graphs[i]->GetXaxis()->SetTickLength(12/(pad1->GetWh()*pad1->GetAbsHNDC()));
+		the_graphs[i]->SetMarkerStyle(marker[i]);
+		the_graphs[i]->SetMarkerColor(color[i]);
+		the_graphs[i]->SetMarkerSize(1.5);
+		the_graphs[i]->SetLineColor(color[i]);
+		the_graphs[i]->SetFillColor(0);
+		if(i==0) the_graphs[i]->Draw("APZ");
+		else the_graphs[i]->Draw("PZ same");
+	}
+
+	leg->SetFillColor(0);
+	leg->SetBorderSize(0);
+	leg->SetTextSize(0.05);
+	leg->SetTextFont(42);
+	leg->SetTextAlign(11); //testing...
+	leg->Draw("same");
+	
+	//setup prelim text
+	double umax3 = .95;
+	TPaveText* pave2 = new TPaveText(umax3-0.3,0.95,umax3,1.0,"NDC");
+	pave2->SetFillColor(0);
+	pave2->SetBorderSize(0);
+	pave2->SetTextFont(42);
+	pave2->SetTextSize(0.04);
+	//pave2->AddText("CMS preliminary");
+	//pave2->AddText("(no radiation damage)");
+	//pave2->Draw("same");
+
+	//plot ratios
+	pad2->cd();
+	
+	TGraphErrors** rat_graph = new TGraphErrors*[s2.size()];
+	
+	for(int i = 1; i <= s2.size(); i++){
+		Double_t* rat = new Double_t[maxE]; //sigma or mean
+		Double_t* y_errors = new Double_t[maxE]; //errors on pars
+		Double_t* x_errors = new Double_t[maxE]; //errors on energy (usually 0)
+
+		//take ratio point-by-point w/ error progression
+		for(int j = 0; j < maxE; j++){
+			rat[j] = vals[i][j]/vals[0][j];
+			y_errors[j] = rat[j]*rat[j]*((errs[i][j]*errs[i][j])/(vals[i][j]*vals[i][j]) + (errs[0][j]*errs[0][j])/(vals[0][j]*vals[0][j]));
+			x_errors[j] = 0;
+		}
+
+		rat_graph[i-1] = new TGraphErrors(maxE,the_graphs[0]->GetX(),rat,x_errors,y_errors);
+		rat_graph[i-1]->GetXaxis()->SetTitle("Energy [GeV]");
+		if(s2.size()>1) rat_graph[i-1]->GetYaxis()->SetTitle(("#frac{various}{" + sp[0]->gname_rat + "}").c_str());
+		else rat_graph[i-1]->GetYaxis()->SetTitle(("#frac{" + sp[1]->gname_rat + "}{" + sp[0]->gname_rat + "}").c_str());
+		rat_graph[i-1]->SetTitle("");
+		rat_graph[i-1]->SetMarkerStyle(marker[i]);
+		rat_graph[i-1]->SetMarkerColor(color[i]);
+		rat_graph[i-1]->SetMarkerSize(1.25);
+		rat_graph[i-1]->SetLineColor(color[i]);
+		rat_graph[i-1]->SetFillColor(0);
+		rat_graph[i-1]->GetYaxis()->SetTitleOffset(0.35);
+		rat_graph[i-1]->GetXaxis()->SetLabelColor(1);
+		rat_graph[i-1]->GetYaxis()->SetLabelColor(1);
+		rat_graph[i-1]->GetXaxis()->SetTitleSize(32/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetXaxis()->SetLabelSize(28/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetYaxis()->SetTitleSize(32/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetYaxis()->SetLabelSize(28/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetYaxis()->SetTickLength(6/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetXaxis()->SetTickLength(12/(pad2->GetWh()*pad2->GetAbsHNDC()));
+		rat_graph[i-1]->GetYaxis()->SetNdivisions(503);
+		if(do_jet) {
+			rat_graph[i-1]->GetYaxis()->SetRangeUser(0.75,1.25);
+			if(qty==0) rat_graph[i-1]->GetYaxis()->SetRangeUser(0.95,1.25);
+			else if(qty==1) rat_graph[i-1]->GetYaxis()->SetRangeUser(0.75,1.05);
+		}
+		else rat_graph[i-1]->GetYaxis()->SetRangeUser(0.5,1.5);
+		
+		if(i==1) rat_graph[i-1]->Draw("APZ");
+		else rat_graph[i-1]->Draw("PZ same");
+	}
+
+	//line
+	TLine *line = new TLine(0,1,rat_graph[0]->GetXaxis()->GetXmax(),1);
+	line->SetLineStyle(2);
+	line->SetLineWidth(1);
+	line->SetLineColor(kBlack);
+	line->Draw("same");
+
+	if(do_print){
+		//names
+		std::string omip;
+		if (imip==0) omip = "mip";
+		else if (imip==1) omip = "nomip";
+		else omip = "tot";
+		std::string rtype = "pion";
+		if(do_jet) rtype = "monojet";
+		std::string qtyname[] = {"mu","sigma","nmip"};
+
+		std::stringstream oname;
+		oname << pdir << "/tp_" << rtype << "_" << qtyname[qty] << "_comp_";
+		for(int i = 0; i <= s2.size(); i++){
+			oname << sp[i]->fpre << "_";
+		}
+		if(do_fit) oname << "fit_";
+		oname << omip << "." << pformat;
+		can->Print((oname.str()).c_str(),pformat.c_str());
+	}
+
+}
+
+//--------------------------------------------------------
+//macro to run g4_multicomp with predefined set of samples
+void run_g4_multicomp_tp(int imip, int qty, bool do_fit, bool do_jet, bool do_print=false){
+	//modify sample display names
+	Sample* sp = sample_map[0];
+	if(!sp) { std::cout << "Sample " << 0 << " is not loaded." << std::endl; return; }
+	sp->gname = "PbWO_{4} ECAL + HE";
+	sp = sample_map[5];
+	if(!sp) { std::cout << "Sample " << 5 << " is not loaded." << std::endl; return; }
+	sp->gname = "W-LYSO ECAL + HE";
+	//sp = sample_map[7];
+	//if(!sp) { std::cout << "Sample " << 7 << " is not loaded." << std::endl; return; }
+	//sp->gname = "W-LYSO ECAL + ext. HE";
+	
+	int s1 = 0;
+	std::vector<int> s2;
+	s2.push_back(5);
+	//s2.push_back(7);
+	
+	g4_multicomp_tp(s1,s2,imip,qty,do_fit,do_jet,do_print);
 }
 
 //----------------------------------------------------------------------
