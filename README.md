@@ -32,8 +32,8 @@ This documentation describes the FCAL standalone simulation, which approximates 
 	  /ecal/det/setHcalOffset
 	* Chou-Birks' law constants: 3 arguments, birks1 birks2 birks3
 	  /ecal/det/setHcalBirks
-        * Non-uniform light yield: integer case (0, 1, 2, 3...), with function defined in SteppingAction
-         /ecal/det/LTnonuniform
+	* Non-uniform light yield: integer case (0, 1, 2, 3...), with function defined in SteppingAction
+	  /ecal/det/LTnonuniform
 	  
 	b) Optionally, an HE extension can be added. This extension is a sampling calorimeter placed between the HE and the zero layer.
 	It is called "ZCAL" in the input commands. It can only be added if the old dead material is disabled.
@@ -238,7 +238,8 @@ This documentation describes the FCAL standalone simulation, which approximates 
 	These template input files demonstrate different geometries and types of events.
 	To make usable input files, the template files are given to the scripts in scripts/, which fill in certain pieces of information
 	(e.g. particle energy).
-	The user should modify any directories in the files in configs/ or scripts/ as needed.
+	The user should modify any directories in the files in configs/ or scripts/ as needed
+	(locations of input files, output files, run directories, etc.).
 	
 	The different geometry configurations are as follows:
 	(default ZCAL layer configuration is 18mm tungsten absorber, 3.7mm plastic scintillator)
@@ -253,9 +254,13 @@ This documentation describes the FCAL standalone simulation, which approximates 
 	* wlyso_only: "infinite" (20 interaction lengths) W-LYSO ECAL, no HCAL or preshower or dead material
 	* wlyso_whcal: W-LYSO ECAL + HCAL with 18 layers of 49.7mm tungsten absorber and default scintillator, no preshower, new dead material (6cm Al)
 	* whcal_only: HCAL with 18 layers of 49.7mm tungsten absorber and default scintillator, particle gun position set to skip ECAL
+        * hcal_nonuni: default ECAL + default HCAL with case 1 nonuniformity for HCAL sensitive layers
+        * hcal_nonuni2: default ECAL + default HCAL with case 2 nonuniformity for HCAL sensitive layers
+        * hcal_nonuni3: default ECAL + default HCAL with case 3 nonuniformity for HCAL sensitive layers
 	
 	In scripts/, the scripts *temp* use these template files to create usable input files for the simulation.
 	The scripts *sub* loop over the *temp* scripts.
+	The scripts *hadd* combine ROOT files for runs that were split into multiple jobs.
 	These scripts are currently configured for batch submission to Condor.
 
 7) MACROS
@@ -263,6 +268,33 @@ This documentation describes the FCAL standalone simulation, which approximates 
 
 	The folder macros/ shows some ROOT macros that can be used to analyze the output ROOT files from the simulation.
 	Documentation of these macros is in progress. (The code is commented to some degree.)
+
+	Basic instructions for g4_energy_res_comp.C:
+	* In the function init_samples(), the location of data files for each configuration is specified.
+	  Whenever you run with a new configuration, you should add it here with a unique number to be referenced by the subsequent analysis functions.
+	  
+	  The parameter v0 of this function specifies which version of the zero layer weight to use:
+	  0 = default (0.5), 1 = optimized by minimizing the RMS of the 50 GeV pion energy distribution (using g4_energy_res_comp_var0i.C),
+	  2 = optimized by minimizing the constant term of the jet energy resolution (using g4_energy_res_comp_var0j.C)
+	  For the nonuniformity studies, the default zero layer weight is fine.
+	  
+	  The arguments for the add_sample function are, in order:
+	  sample number, folder containing the input files, prefix for the input file names, legend text, ratio text, boolean for homogeneous ECAL,
+	  zero layer weight, HE extension weight (0 if no extension), supplemental legend text
+
+	* To calculate the jet resolution, run jobs for all of the default jet energies (20, 50, 100, 250, 500, 750 GeV).
+	  A run of 50 GeV pions is also necessary to calibrate the HCAL in the given configuration.
+	  (If the ECAL is non-homogeneous, a run of 50 GeV electrons is also necessary to calibrate the ECAL.)
+	  g4_plot_res() will plot the jet response or resolution for one configuration.
+	  g4_comp() will compare the jet response or resolution for two configurations.
+	  g4_multicomp() will compare the jet response or resolution for multiple configurations.
+	  run_g4_multicomp() can be modified to execute g4_multicomp() with a specified list of configurations.
+
+	* Running the macro:
+	  root -l
+	  .L g4_energy_res_comp.C+
+	  init_samples();
+	  g4_comp(0,1000,2,1,0,1);
 
 8) OTHER VERSIONS
 -----------------------------------------------------------------------------------------------------------------------------------------------
